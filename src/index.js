@@ -3,7 +3,7 @@ const Alexa = require('ask-sdk');
 
 const SESSION_BEGIN_MESSAGE = "Welcome! Before or After will challenge your abilities to reason and recall!";
 const SESSION_END_MESSAGE = "See you next time for more historical challenges!";
-const HELP_MESSAGE = "I will ask you to determine which event in a list occurred first! Say \"Let's Play\" to get started!";
+const HELP_MESSAGE = "I will ask you which event occurred first! Say \"Let's Play\" to get started!";
 const FALLBACK_MESSAGE = "Sorry, I don't understand that command. Try \"Let's Play\" to get started!";
 const WELCOME_MESSAGE = SESSION_BEGIN_MESSAGE + ' ' + HELP_MESSAGE;
 
@@ -17,6 +17,35 @@ const INTENT_REQUEST_TYPE = 'IntentRequest';
 const SESSON_END_REQUEST_TYPE = 'SessionEndedRequest';
 
 const CHALLENGES_LAST_COUNT = 4;
+
+const NEW_GAME_START_PHRASES = [
+    "Here we go!",
+    "Now we are starting!",
+    "Try your best!"
+];
+const NEXT_QUESTION_PHRASES = [
+    "Here's your next question.",
+    "OK here you go.",
+    "Let's try this one."
+];
+const CORRECT_ANSWER_PHRASES = [
+    "Exactly - that's right",
+    "Right on! That's correct!",
+    "Perfect! Great answer!"
+];
+const WRONG_ANSWER_PHRASES = [
+    "Sorry, that's not right.",
+    "Ooh, missed that one!",
+    "Unlucky!"
+];
+
+/**
+ * Choose a response from a list of options
+ * @param {string[]} phrases Possible responses
+ */
+function phrasePick(phrases) {
+    return phrases[Math.floor(Math.random() * phrases.length)];
+}
 
 /**
  * Helper to confirm matching Request Type and
@@ -44,7 +73,7 @@ const NewGameHandler = {
     canHandle: handlerInput => canHandleRequestTypeAndName(INTENT_REQUEST_TYPE, STORY_EVENT_COMMANDS)(handlerInput),
     handle: handlerInput => {
         initalizeStateSession(handlerInput);
-        return promptNextStoryEventChallenge(handlerInput, "Here we go!");
+        return promptNextStoryEventChallenge(handlerInput, phrasePick(NEW_GAME_START_PHRASES));
     }
 };
 
@@ -83,12 +112,15 @@ const AnswerHandler = {
         return canHandleRequestTypeAndName(INTENT_REQUEST_TYPE, ANSWER_COMMANDS)(handlerInput) && attributes.challenges < CHALLENGES_LAST_COUNT
     },
     handle(handlerInput) {
-        const answerSlot = handlerInput.requestEnvelope.request.intent.slots.answer.value;
-        const resultMessage = updateBasedOnAnswer(handlerInput, answerSlot);
-        const speechOutput = resultMessage + " Here's your next question.";
+        const speechOutput = processAnswerResponse(handlerInput) + " " + phrasePick(NEXT_QUESTION_PHRASES);
         return promptNextStoryEventChallenge(handlerInput, speechOutput)
     }
 };
+
+function processAnswerResponse(handlerInput) {
+    const answerSlot = handlerInput.requestEnvelope.request.intent.slots.answer.value;
+    return updateBasedOnAnswer(handlerInput, answerSlot) 
+}
 
 function updateBasedOnAnswer(handlerInput, answerSlot) {
     let message = "";
@@ -96,12 +128,12 @@ function updateBasedOnAnswer(handlerInput, answerSlot) {
     attributes.challenges++;
     if ((attributes.lastBefore && answerSlot == "before") || (!attributes.lastBefore && answerSlot == "after")) {
         attributes.successAnswer++;
-        message = "Exactly! Right on!";
+        message = phrasePick(CORRECT_ANSWER_PHRASES);
     } else {
-        message = "Nope. We were looking for " + (answerSlot == "before" ? "after" : "before") + ".";
+        message = phrasePick(WRONG_ANSWER_PHRASES);
     }
 
-    attributes.isFinished = attributes.challenges > CHALLENGES_LAST_COUNT;
+    attributes.isFinished = attributes.challenges >= CHALLENGES_LAST_COUNT;
     handlerInput.attributesManager.setSessionAttributes(attributes);
     return message
 }
@@ -112,9 +144,12 @@ const FinalScoreHandler = {
 		return canHandleRequestTypeAndName(INTENT_REQUEST_TYPE, ANSWER_COMMANDS)(handlerInput) && attributes.isFinished;
 	},
 	handle(handlerInput) {
+        const finalAnswer = processAnswerResponse(handlerInput);
         const attributes = handlerInput.attributesManager.getSessionAttributes();
 		return handlerInput.responseBuilder
-			.speak("With that final question, your final score is " + attributes.successAnswer + " out of " + attributes.challenges)
+            .speak(`${finalAnswer} That ends this round! Your final score is ${attributes.successAnswer} out of ${attributes.challenges}. ` + 
+                "Say \"Let's Play\" to start another round."
+            )
 			.getResponse();
 	}
 };
@@ -142,8 +177,8 @@ const SessionEndedRequestHandler = {
 
 const ErrorHandler = {
     canHandle: () => true,
-    handle(handlerInput, error) {
-        console.log(`Error handled: ${error.message}`);
+    handle(handlerInput) {
+        console.log(`Command fallback: ${JSON.stringify(handlerInput.requestEnvelope.request)}`);
         return buildSpeakAndRepromptResponse(FALLBACK_MESSAGE, FALLBACK_MESSAGE)(handlerInput);
     },
 };
