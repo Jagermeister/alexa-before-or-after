@@ -10,7 +10,7 @@
     "alexa-skill-local": "^1.3.0"
   },
   "scripts": {
-    "test": "alexa-skill-local --file ./src/index.js --config alexa-skill-local.json"
+    "test": "alexa-skill-local --file ./index.js --config alexa-skill-local.json"
   },
   "repository": {
     "type": "git",

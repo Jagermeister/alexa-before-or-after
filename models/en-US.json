@@ -1,0 +1,118 @@
+{
+    "interactionModel": {
+        "languageModel": {
+            "invocationName": "before or after",
+            "intents": [
+                {
+                    "name": "AMAZON.FallbackIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.CancelIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.HelpIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.StopIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.NavigateHomeIntent",
+                    "samples": []
+                },
+                {
+                    "name": "StartGame",
+                    "slots": [],
+                    "samples": [
+                        "let's play",
+                        "new game",
+                        "play",
+                        "start"
+                    ]
+                },
+                {
+                    "name": "AnswerIntent",
+                    "slots": [
+                        {
+                            "name": "answer",
+                            "type": "B_O_A__ANSWER",
+                            "samples": [
+                                "Was it {answer}",
+                                "is it {answer}",
+                                "Maybe {answer}",
+                                "{answer}"
+                            ]
+                        }
+                    ],
+                    "samples": [
+                        "I'm saying {answer}",
+                        "I'm hoping {answer}",
+                        "I guess {answer}",
+                        "Is it {answer}",
+                        "{answer}"
+                    ]
+                }
+            ],
+            "types": [
+                {
+                    "name": "B_O_A__ANSWER",
+                    "values": [
+                        {
+                            "name": {
+                                "value": "after"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "before"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        "dialog": {
+            "intents": [
+                {
+                    "name": "AnswerIntent",
+                    "confirmationRequired": false,
+                    "prompts": {},
+                    "slots": [
+                        {
+                            "name": "answer",
+                            "type": "B_O_A__ANSWER",
+                            "confirmationRequired": false,
+                            "elicitationRequired": true,
+                            "prompts": {
+                                "elicitation": "Elicit.Slot.518053341764.783295628923"
+                            }
+                        }
+                    ]
+                }
+            ],
+            "delegationStrategy": "ALWAYS"
+        },
+        "prompts": [
+            {
+                "id": "Elicit.Slot.518053341764.783295628923",
+                "variations": [
+                    {
+                        "type": "PlainText",
+                        "value": "What is your guess?"
+                    },
+                    {
+                        "type": "PlainText",
+                        "value": "What's your guess?"
+                    },
+                    {
+                        "type": "PlainText",
+                        "value": "Do you think it occurred before or after?"
+                    }
+                ]
+            }
+        ]
+    }
+}
