@@ -68,6 +68,10 @@ function buildSpeakAndRepromptResponse(speak, reprompt) {
     return handlerInput => handlerInput.responseBuilder.speak(speak).reprompt(reprompt).getResponse();
 }
 
+function isAlexaPresentationLanguageSupported(handlerInput) {
+    return 'Alexa.Presentation.APL' in handlerInput.requestEnvelope.context.System.device.supportedInterfaces;
+}
+
 
 const NewGameHandler = {
     canHandle: handlerInput => canHandleRequestTypeAndName(INTENT_REQUEST_TYPE, STORY_EVENT_COMMANDS)(handlerInput),
@@ -85,7 +89,7 @@ function initalizeStateSession(handlerInput) {
     handlerInput.attributesManager.setSessionAttributes(attributes);
 }
 
-function promptNextStoryEventChallenge(handlerInput, textPrefix='') {
+function promptNextStoryEventChallenge(handlerInput, textPrefix = '') {
     const story = fetchNextEventChallenge(handlerInput);
     const speechOutput = `${textPrefix} Did ${story.a.title} occur BEFORE or AFTER ${story.b.title}?`;
     return buildSpeakAndRepromptResponse(speechOutput, speechOutput)(handlerInput);
@@ -119,7 +123,7 @@ const AnswerHandler = {
 
 function processAnswerResponse(handlerInput) {
     const answerSlot = handlerInput.requestEnvelope.request.intent.slots.answer.value;
-    return updateBasedOnAnswer(handlerInput, answerSlot) 
+    return updateBasedOnAnswer(handlerInput, answerSlot)
 }
 
 function updateBasedOnAnswer(handlerInput, answerSlot) {
@@ -139,25 +143,70 @@ function updateBasedOnAnswer(handlerInput, answerSlot) {
 }
 
 const FinalScoreHandler = {
-	canHandle(handlerInput) {
-		const attributes = handlerInput.attributesManager.getSessionAttributes();
-		return canHandleRequestTypeAndName(INTENT_REQUEST_TYPE, ANSWER_COMMANDS)(handlerInput) && attributes.isFinished;
-	},
-	handle(handlerInput) {
+    canHandle(handlerInput) {
+        const attributes = handlerInput.attributesManager.getSessionAttributes();
+        return canHandleRequestTypeAndName(INTENT_REQUEST_TYPE, ANSWER_COMMANDS)(handlerInput) && attributes.isFinished;
+    },
+    handle(handlerInput) {
         const finalAnswer = processAnswerResponse(handlerInput);
         const attributes = handlerInput.attributesManager.getSessionAttributes();
-		return handlerInput.responseBuilder
-            .speak(`${finalAnswer} That ends this round! Your final score is ${attributes.successAnswer} out of ${attributes.challenges}. ` + 
+        return handlerInput.responseBuilder
+            .speak(`${finalAnswer} That ends this round! Your final score is ${attributes.successAnswer} out of ${attributes.challenges}. ` +
                 "Say \"Let's Play\" to start another round."
             )
-			.getResponse();
-	}
+            .getResponse();
+    }
 };
 
 
 const LaunchRequestHandler = {
     canHandle: handlerInput => canHandleRequestTypeAndName(LAUNCH_REQUEST_TYPE)(handlerInput),
-    handle: handlerInput => buildSpeakAndRepromptResponse(WELCOME_MESSAGE, HELP_MESSAGE)(handlerInput)
+    handle: handlerInput => {
+        if (isAlexaPresentationLanguageSupported(handlerInput)) {
+            return handlerInput.responseBuilder
+                .speak(WELCOME_MESSAGE)
+                //.reprompt(HELP_MESSAGE)
+                .addDirective({
+                    type: 'Alexa.Presentation.APL.RenderDocument',
+                    version: '1.0',
+                    document: {
+                        "type": "APL",
+                        "version": "1.0",
+                        "import": [{
+                            "name": "alexa-layouts",
+                            "version": "1.0.0"
+                        }],
+                        "mainTemplate": {
+                            "parameters": ["payload"],
+                            "items": [{
+                                "type": "Container",
+                                "height": "100vh",
+                                "items": [{
+                                    "type": "AlexaHeader",
+                                    "headerTitle": "${payload.resource.properties.title}",
+                                    "headerBackgroundColor": "red"
+                                }, {
+                                    "type": "Text",
+                                    "text": "${payload.resource.properties.text}"
+                                }]
+                            }]
+                        }
+                    },
+                    datasources: {
+                        resource: {
+                            type: 'object',
+                            properties: {
+                                title: 'WELCOME',
+                                text: WELCOME_MESSAGE
+                            },
+                        }
+                    }
+                })
+                .getResponse();
+        } else {
+            return buildSpeakAndRepromptResponse(WELCOME_MESSAGE, HELP_MESSAGE)(handlerInput);
+        }
+    }
 };
 
 const HelpIntentHandler = {

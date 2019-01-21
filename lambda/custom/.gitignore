@@ -1,6 +1,10 @@
 # Configuration
 alexa-skill-local.json
 
+# Data
+data/*
+!data/.gitkeep
+
 # Logs
 logs
 *.log
