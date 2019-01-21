@@ -17,26 +17,48 @@ const INTENT_REQUEST_TYPE = 'IntentRequest';
 const SESSON_END_REQUEST_TYPE = 'SessionEndedRequest';
 
 const CHALLENGES_LAST_COUNT = 4;
+const EVENT_YEAR_MIN_DEFAULT = 32;
+const EVENT_YEAR_MAX_DEFAULT = 256;
 
 const NEW_GAME_START_PHRASES = [
     "Here we go!",
     "Now we are starting!",
-    "Try your best!"
+    "Try your best!",
+    "Let's play!",
+    "Going for the gold."
 ];
 const NEXT_QUESTION_PHRASES = [
     "Here's your next question.",
     "OK here you go.",
-    "Let's try this one."
+    "Let's try this one.",
+    "Next up.",
+    "Ready? Here goes.",
+    ""
 ];
 const CORRECT_ANSWER_PHRASES = [
     "Exactly - that's right!",
     "Right on! That's correct!",
-    "Perfect! Great answer!"
+    "Perfect! Great answer!",
+    "You're right with that one.",
+    "You are right",
+    "Correcto.",
+    "Correct",
+    "Right as rain.",
+    "Right!",
+    "You got this one!",
+    "You got it!.",
+    "Yes!"
 ];
 const WRONG_ANSWER_PHRASES = [
     "Sorry, that's not right.",
     "Ooh, missed that one!",
-    "Unlucky!"
+    "Unlucky!",
+    "Not quite this time.",
+    "Better luck next time",
+    "Oh no.",
+    "No.",
+    "That's not correct.",
+    "That's not right."
 ];
 
 
@@ -127,31 +149,56 @@ function initalizeStateSession(handlerInput) {
     const attributes = handlerInput.attributesManager.getSessionAttributes();
     attributes.challenges = 0;
     attributes.successAnswer = 0;
+    attributes.seenEvents = [];
+    attributes.yearMax = EVENT_YEAR_MAX_DEFAULT;
+    attributes.yearMin = EVENT_YEAR_MIN_DEFAULT;
     attributes.isFinished = false;
     handlerInput.attributesManager.setSessionAttributes(attributes);
 }
 
 function promptNextStoryEventChallenge(handlerInput, textPrefix = '') {
     const story = fetchNextEventChallenge(handlerInput);
-    const speechOutput = `${textPrefix} Did ${story.a.title} occur BEFORE or AFTER ${story.b.title}?`;
+    const speechOutput = `${textPrefix} Did ${story.a.t} occur BEFORE or AFTER ${story.b.t}?`;
     const attributes = handlerInput.attributesManager.getSessionAttributes();
     const subtitle = `  Question ${attributes.challenges + 1} of ${CHALLENGES_LAST_COUNT + 1}`;
     return buildSpeakAndRepromptResponse('BEFORE OR AFTER?', speechOutput, speechOutput, subtitle)(handlerInput);
 }
 
 function fetchNextEventChallenge(handlerInput) {
-    // Fetch New Story Events
-    const story_event_a = { "year": 1932, "title": "Amelia Earhart solo flight across the Atlantic Ocean" };
-    const story_event_b = { "year": 1931, "title": "The Empire State Building opened in New York City" };
 
     const attributes = handlerInput.attributesManager.getSessionAttributes();
-    attributes.lastBefore = story_event_a.year < story_event_b.year;
+    const yearMax = attributes.yearMax;
+    const yearMin = attributes.yearMin;
+    const seen = attributes.seenEvents;
+
+    let story_event_a, story_event_b;
+    [story_event_a, story_event_b] = eventsByAttributes(seen, yearMin, yearMax);
+
+    attributes.seenEvents.push(story_event_a.i, story_event_b.i);
+    attributes.lastBefore = story_event_a.y < story_event_b.y;
     handlerInput.attributesManager.setSessionAttributes(attributes);
 
     return {
         a: story_event_a,
         b: story_event_b
     };
+}
+
+function eventsByAttributes(seen, yearMin, yearMax) {
+    const events = require('./data/events.json');
+    const options = seen ? events.filter(e => seen.indexOf(e.i) === -1) : events;
+
+    const eventOneKey = Math.floor(Math.random() * options.length);
+    const eventOne = options[eventOneKey];
+    delete options[eventOneKey];
+
+    const eventsChoose = options.filter(e =>
+        Math.abs(e.y - eventOne.y) >= yearMin
+        && Math.abs(e.y - eventOne.y) <= yearMax
+        && e.y !== eventOne.y);
+    let eventTwo = eventsChoose[Math.floor(Math.random() * eventsChoose.length)];
+
+    return [eventOne, eventTwo];
 }
 
 const AnswerHandler = {
@@ -176,8 +223,12 @@ function updateBasedOnAnswer(handlerInput, answerSlot) {
     attributes.challenges++;
     if ((attributes.lastBefore && answerSlot == "before") || (!attributes.lastBefore && answerSlot == "after")) {
         attributes.successAnswer++;
+        attributes.yearMax /= 2;
+        attributes.yearMin /= 2;
         message = phrasePick(CORRECT_ANSWER_PHRASES);
     } else {
+        attributes.yearMax = Math.min(attributes.yearMax * 2, EVENT_YEAR_MAX_DEFAULT);
+        attributes.yearMin = Math.min(attributes.yearMax * 2, EVENT_YEAR_MIN_DEFAULT);
         message = phrasePick(WRONG_ANSWER_PHRASES);
     }
 
@@ -232,7 +283,8 @@ const ErrorHandler = {
 };
 
 exports.handler = Alexa.SkillBuilders.custom()
-    .addRequestHandlers(LaunchRequestHandler,
+    .addRequestHandlers(
+        LaunchRequestHandler,
         NewGameHandler,
         AnswerHandler,
         FinalScoreHandler,
