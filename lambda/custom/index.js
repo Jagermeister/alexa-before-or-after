@@ -40,13 +40,13 @@ const CORRECT_ANSWER_PHRASES = [
     "Right on! That's correct!",
     "Perfect! Great answer!",
     "You're right with that one.",
-    "You are right",
+    "You are right.",
     "Correcto.",
-    "Correct",
+    "Correct.",
     "Right as rain.",
     "Right!",
     "You got this one!",
-    "You got it!.",
+    "You got it!",
     "Yes!"
 ];
 const WRONG_ANSWER_PHRASES = [
@@ -54,7 +54,7 @@ const WRONG_ANSWER_PHRASES = [
     "Ooh, missed that one!",
     "Unlucky!",
     "Not quite this time.",
-    "Better luck next time",
+    "Better luck next time.",
     "Oh no.",
     "No.",
     "That's not correct.",
@@ -165,7 +165,6 @@ function promptNextStoryEventChallenge(handlerInput, textPrefix = '') {
 }
 
 function fetchNextEventChallenge(handlerInput) {
-
     const attributes = handlerInput.attributesManager.getSessionAttributes();
     const yearMax = attributes.yearMax;
     const yearMin = attributes.yearMin;
@@ -196,7 +195,9 @@ function eventsByAttributes(seen, yearMin, yearMax) {
         Math.abs(e.y - eventOne.y) >= yearMin
         && Math.abs(e.y - eventOne.y) <= yearMax
         && e.y !== eventOne.y);
-    let eventTwo = eventsChoose[Math.floor(Math.random() * eventsChoose.length)];
+    let eventTwo = eventsChoose.length ?
+        eventsChoose[Math.floor(Math.random() * eventsChoose.length)] :
+        options[Math.floor(Math.random() * options.length)];
 
     return [eventOne, eventTwo];
 }
@@ -240,12 +241,13 @@ function updateBasedOnAnswer(handlerInput, answerSlot) {
 const FinalScoreHandler = {
     canHandle(handlerInput) {
         const attributes = handlerInput.attributesManager.getSessionAttributes();
-        return canHandleRequestTypeAndName(INTENT_REQUEST_TYPE, ANSWER_COMMANDS)(handlerInput) && attributes.isFinished;
+        return canHandleRequestTypeAndName(INTENT_REQUEST_TYPE, ANSWER_COMMANDS)(handlerInput)
+            && attributes.isFinished && attributes.challenges <= CHALLENGES_LAST_COUNT;
     },
     handle(handlerInput) {
         const finalAnswer = processAnswerResponse(handlerInput);
         const attributes = handlerInput.attributesManager.getSessionAttributes();
-        const speak = `${finalAnswer} That ends this round!` +
+        const speak = `${finalAnswer} That ends this round! ` +
             `Your final score is ${attributes.successAnswer} out of ${attributes.challenges}. `;
         const reprompt = "Say \"Let's Play\" to start another round.";
         const subtitle = `${attributes.successAnswer} out of ${attributes.challenges} correct`;
