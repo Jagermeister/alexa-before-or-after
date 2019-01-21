@@ -29,7 +29,7 @@ const NEXT_QUESTION_PHRASES = [
     "Let's try this one."
 ];
 const CORRECT_ANSWER_PHRASES = [
-    "Exactly - that's right",
+    "Exactly - that's right!",
     "Right on! That's correct!",
     "Perfect! Great answer!"
 ];
@@ -38,6 +38,38 @@ const WRONG_ANSWER_PHRASES = [
     "Ooh, missed that one!",
     "Unlucky!"
 ];
+
+
+function documentAPL(title, text, subtitle = '') {
+    return {
+        type: 'Alexa.Presentation.APL.RenderDocument',
+        version: '1.0',
+        document: {
+            "type": "APL",
+            "version": "1.0",
+            "import": [{
+                "name": "alexa-layouts",
+                "version": "1.0.0"
+            }],
+            "mainTemplate": {
+                "parameters": ["payload"],
+                "items": [{
+                    "type": "Container",
+                    "height": "100vh",
+                    "items": [{
+                        "type": "AlexaHeader",
+                        "headerTitle": title,
+                        "headerSubtitle": subtitle,
+                        "headerBackgroundColor": "#4682b4"
+                    }, {
+                        "type": "Text",
+                        "text": text
+                    }]
+                }]
+            }
+        }
+    }
+}
 
 /**
  * Choose a response from a list of options
@@ -64,8 +96,18 @@ function canHandleRequestTypeAndName(type, names = []) {
  * @param {string} speak Text Alexa will speak
  * @param {string} reprompt Alexa will reprompt users with this text
  */
-function buildSpeakAndRepromptResponse(speak, reprompt) {
-    return handlerInput => handlerInput.responseBuilder.speak(speak).reprompt(reprompt).getResponse();
+function buildSpeakAndRepromptResponse(title, speak, reprompt, subtitle = '') {
+    return handlerInput => {
+        if (isAlexaPresentationLanguageSupported(handlerInput)) {
+            return handlerInput.responseBuilder
+                .speak(speak)
+                .reprompt(reprompt)
+                .addDirective(documentAPL(title, speak, subtitle))
+                .getResponse();
+        } else {
+            return handlerInput.responseBuilder.speak(speak).reprompt(reprompt).getResponse();
+        }
+    }
 }
 
 function isAlexaPresentationLanguageSupported(handlerInput) {
@@ -92,7 +134,9 @@ function initalizeStateSession(handlerInput) {
 function promptNextStoryEventChallenge(handlerInput, textPrefix = '') {
     const story = fetchNextEventChallenge(handlerInput);
     const speechOutput = `${textPrefix} Did ${story.a.title} occur BEFORE or AFTER ${story.b.title}?`;
-    return buildSpeakAndRepromptResponse(speechOutput, speechOutput)(handlerInput);
+    const attributes = handlerInput.attributesManager.getSessionAttributes();
+    const subtitle = `  Question ${attributes.challenges + 1} of ${CHALLENGES_LAST_COUNT + 1}`;
+    return buildSpeakAndRepromptResponse('BEFORE OR AFTER?', speechOutput, speechOutput, subtitle)(handlerInput);
 }
 
 function fetchNextEventChallenge(handlerInput) {
@@ -150,68 +194,23 @@ const FinalScoreHandler = {
     handle(handlerInput) {
         const finalAnswer = processAnswerResponse(handlerInput);
         const attributes = handlerInput.attributesManager.getSessionAttributes();
-        return handlerInput.responseBuilder
-            .speak(`${finalAnswer} That ends this round! Your final score is ${attributes.successAnswer} out of ${attributes.challenges}. ` +
-                "Say \"Let's Play\" to start another round."
-            )
-            .getResponse();
+        const speak = `${finalAnswer} That ends this round!` +
+            `Your final score is ${attributes.successAnswer} out of ${attributes.challenges}. `;
+        const reprompt = "Say \"Let's Play\" to start another round.";
+        const subtitle = `${attributes.successAnswer} out of ${attributes.challenges} correct`;
+        return buildSpeakAndRepromptResponse('FINAL SCORE', speak + reprompt, reprompt, subtitle)(handlerInput);
     }
 };
 
 
 const LaunchRequestHandler = {
     canHandle: handlerInput => canHandleRequestTypeAndName(LAUNCH_REQUEST_TYPE)(handlerInput),
-    handle: handlerInput => {
-        if (isAlexaPresentationLanguageSupported(handlerInput)) {
-            return handlerInput.responseBuilder
-                .speak(WELCOME_MESSAGE)
-                //.reprompt(HELP_MESSAGE)
-                .addDirective({
-                    type: 'Alexa.Presentation.APL.RenderDocument',
-                    version: '1.0',
-                    document: {
-                        "type": "APL",
-                        "version": "1.0",
-                        "import": [{
-                            "name": "alexa-layouts",
-                            "version": "1.0.0"
-                        }],
-                        "mainTemplate": {
-                            "parameters": ["payload"],
-                            "items": [{
-                                "type": "Container",
-                                "height": "100vh",
-                                "items": [{
-                                    "type": "AlexaHeader",
-                                    "headerTitle": "${payload.resource.properties.title}",
-                                    "headerBackgroundColor": "red"
-                                }, {
-                                    "type": "Text",
-                                    "text": "${payload.resource.properties.text}"
-                                }]
-                            }]
-                        }
-                    },
-                    datasources: {
-                        resource: {
-                            type: 'object',
-                            properties: {
-                                title: 'WELCOME',
-                                text: WELCOME_MESSAGE
-                            },
-                        }
-                    }
-                })
-                .getResponse();
-        } else {
-            return buildSpeakAndRepromptResponse(WELCOME_MESSAGE, HELP_MESSAGE)(handlerInput);
-        }
-    }
+    handle: handlerInput => buildSpeakAndRepromptResponse('WELCOME', WELCOME_MESSAGE, HELP_MESSAGE)(handlerInput)
 };
 
 const HelpIntentHandler = {
     canHandle: handlerInput => canHandleRequestTypeAndName(INTENT_REQUEST_TYPE, HELP_COMMANDS)(handlerInput),
-    handle: handlerInput => buildSpeakAndRepromptResponse(HELP_MESSAGE, HELP_MESSAGE)(handlerInput)
+    handle: handlerInput => buildSpeakAndRepromptResponse("Let's Play!", HELP_MESSAGE, HELP_MESSAGE)(handlerInput)
 };
 
 const CancelAndStopIntentHandler = {
@@ -228,7 +227,7 @@ const ErrorHandler = {
     canHandle: () => true,
     handle(handlerInput) {
         console.log(`Command fallback: ${JSON.stringify(handlerInput.requestEnvelope.request)}`);
-        return buildSpeakAndRepromptResponse(FALLBACK_MESSAGE, FALLBACK_MESSAGE)(handlerInput);
+        return handlerInput.responseBuilder.speak(FALLBACK_MESSAGE).getResponse();
     },
 };
 
