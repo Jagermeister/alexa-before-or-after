@@ -4,7 +4,7 @@ const Alexa = require('ask-sdk');
 const SESSION_BEGIN_MESSAGE = "Welcome! Before or After will challenge your abilities to reason and recall!";
 const SESSION_END_MESSAGE = "See you next time for more historical challenges!";
 const HELP_MESSAGE = "I will ask you which event occurred first! Say \"Let's Play\" to get started!";
-const FALLBACK_MESSAGE = "Sorry, I don't understand that command. Try \"Let's Play\" to get started!";
+const FALLBACK_MESSAGE = "Sorry, try answering with \"Before\", or \"After\". Saying \"Let's Play\" will start the game.";
 const WELCOME_MESSAGE = SESSION_BEGIN_MESSAGE + ' ' + HELP_MESSAGE;
 
 const STORY_EVENT_COMMANDS = ["StartGame", "AMAZON.StartOverIntent"];
@@ -14,7 +14,6 @@ const HELP_COMMANDS = ["AMAZON.HelpIntent"];
 
 const LAUNCH_REQUEST_TYPE = 'LaunchRequest';
 const INTENT_REQUEST_TYPE = 'IntentRequest';
-const SESSON_END_REQUEST_TYPE = 'SessionEndedRequest';
 
 const CHALLENGES_LAST_COUNT = 4;
 const EVENT_YEAR_MIN_DEFAULT = 32;
@@ -78,14 +77,26 @@ function documentAPL(title, text, subtitle = '') {
                 "items": [{
                     "type": "Container",
                     "height": "100vh",
+                    "alignItems": "center",
                     "items": [{
                         "type": "AlexaHeader",
+                        "width": "100vw",
                         "headerTitle": title,
                         "headerSubtitle": subtitle,
                         "headerBackgroundColor": "#4682b4"
                     }, {
-                        "type": "Text",
-                        "text": text
+                        "type": "ScrollView",
+                        "height": "100vh",
+                        "item": {
+                            "type": "Container",
+                            "width": "80vw",
+                            "height": "64vh",
+                            "items": [{
+                                "type": "Text",
+                                "textAlign": "center",
+                                "text": text
+                            }]
+                        }
                     }]
                 }]
             }
@@ -268,19 +279,14 @@ const HelpIntentHandler = {
 
 const CancelAndStopIntentHandler = {
     canHandle: handlerInput => canHandleRequestTypeAndName(INTENT_REQUEST_TYPE, STOP_CANCEL_COMMANDS)(handlerInput),
-    handle: handlerInput => handlerInput.responseBuilder.speak(SESSION_END_MESSAGE).getResponse()
-};
-
-const SessionEndedRequestHandler = {
-    canHandle: handlerInput => canHandleRequestTypeAndName(SESSON_END_REQUEST_TYPE)(handlerInput),
-    handle: handlerInput => handlerInput.responseBuilder.getResponse()
+    handle: handlerInput => handlerInput.responseBuilder.speak(SESSION_END_MESSAGE)
 };
 
 const ErrorHandler = {
     canHandle: () => true,
     handle(handlerInput) {
         console.log(`Command fallback: ${JSON.stringify(handlerInput.requestEnvelope.request)}`);
-        return handlerInput.responseBuilder.speak(FALLBACK_MESSAGE).getResponse();
+        return handlerInput.responseBuilder.speak(FALLBACK_MESSAGE);
     },
 };
 
@@ -292,6 +298,5 @@ exports.handler = Alexa.SkillBuilders.custom()
         FinalScoreHandler,
         HelpIntentHandler,
         CancelAndStopIntentHandler,
-        SessionEndedRequestHandler,
         ErrorHandler)
     .lambda();
