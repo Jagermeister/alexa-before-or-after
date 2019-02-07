@@ -7,6 +7,10 @@ A historical event game where players determine which event occurred first!
 ## How to play?
 Add this Alexa skill by saying "Enable Before or After". To start the application say "Open Before or After" or "Play Before or After". All Alexa devices should be capable of playing and viewing content produced by this skill.
 
+## Features
+- US History and Current Events
+- Adaptive strength allows for more challenges questions when you succeed
+
 ## Technical
 ### Production
 
