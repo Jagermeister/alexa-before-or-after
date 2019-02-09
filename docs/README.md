@@ -8,6 +8,9 @@ A historical event game where players determine which event occurred first!
 Add this Alexa skill by saying "Enable Before or After". To start the application say "Open Before or After" or "Play Before or After". All Alexa devices should be capable of playing and viewing content produced by this skill.
 
 ## Technical
-### Production
+### Testing
+NPM script `test` is configured with package alexa-skill-local to route requests to your local codebase from the Alexa Developer Console Test.
 
-### Development
+### Deployment
+#### AWS Lambda
+Everything within `lambda/custom` needs to be zipped (including node_modules) and uploaded to AWS.

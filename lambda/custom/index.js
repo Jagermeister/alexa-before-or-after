@@ -129,13 +129,13 @@ function canHandleRequestTypeAndName(type, names = []) {
  * @param {string} speak Text Alexa will speak
  * @param {string} reprompt Alexa will reprompt users with this text
  */
-function buildSpeakAndRepromptResponse(title, speak, reprompt, subtitle = '') {
+function buildSpeakAndRepromptResponse(title, text, speak, reprompt, subtitle = '') {
     return handlerInput => {
         if (isAlexaPresentationLanguageSupported(handlerInput)) {
             return handlerInput.responseBuilder
                 .speak(speak)
                 .reprompt(reprompt)
-                .addDirective(documentAPL(title, speak, subtitle))
+                .addDirective(documentAPL(title, text, subtitle))
                 .getResponse();
         } else {
             return handlerInput.responseBuilder.speak(speak).reprompt(reprompt).getResponse();
@@ -169,10 +169,11 @@ function initalizeStateSession(handlerInput) {
 
 function promptNextStoryEventChallenge(handlerInput, textPrefix = '') {
     const story = fetchNextEventChallenge(handlerInput);
-    const speechOutput = `${textPrefix} Did ${story.a.t} occur BEFORE or AFTER ${story.b.t}?`;
+    const textOutput = `${story.a.t} occur BEFORE or AFTER ${story.b.t}?`;
+    const speechOutput = `${textPrefix} Did ${story.a.d} occur BEFORE or AFTER ${story.b.d}?`;
     const attributes = handlerInput.attributesManager.getSessionAttributes();
     const subtitle = `  Question ${attributes.challenges + 1} of ${CHALLENGES_LAST_COUNT + 1}`;
-    return buildSpeakAndRepromptResponse('BEFORE OR AFTER?', speechOutput, speechOutput, subtitle)(handlerInput);
+    return buildSpeakAndRepromptResponse('BEFORE OR AFTER?', textOutput, speechOutput, speechOutput, subtitle)(handlerInput);
 }
 
 function fetchNextEventChallenge(handlerInput) {
@@ -258,23 +259,24 @@ const FinalScoreHandler = {
     handle(handlerInput) {
         const finalAnswer = processAnswerResponse(handlerInput);
         const attributes = handlerInput.attributesManager.getSessionAttributes();
+        const text = `${attributes.successAnswer} out of ${attributes.challenges}`;
         const speak = `${finalAnswer} That ends this round! ` +
             `Your final score is ${attributes.successAnswer} out of ${attributes.challenges}. `;
         const reprompt = "Say \"Let's Play\" to start another round.";
         const subtitle = `${attributes.successAnswer} out of ${attributes.challenges} correct`;
-        return buildSpeakAndRepromptResponse('FINAL SCORE', speak + reprompt, reprompt, subtitle)(handlerInput);
+        return buildSpeakAndRepromptResponse('FINAL SCORE', text, speak + reprompt, reprompt, subtitle)(handlerInput);
     }
 };
 
 
 const LaunchRequestHandler = {
     canHandle: handlerInput => canHandleRequestTypeAndName(LAUNCH_REQUEST_TYPE)(handlerInput),
-    handle: handlerInput => buildSpeakAndRepromptResponse('WELCOME', WELCOME_MESSAGE, HELP_MESSAGE)(handlerInput)
+    handle: handlerInput => buildSpeakAndRepromptResponse('WELCOME', 'WELCOME', WELCOME_MESSAGE, HELP_MESSAGE)(handlerInput)
 };
 
 const HelpIntentHandler = {
     canHandle: handlerInput => canHandleRequestTypeAndName(INTENT_REQUEST_TYPE, HELP_COMMANDS)(handlerInput),
-    handle: handlerInput => buildSpeakAndRepromptResponse("Let's Play!", HELP_MESSAGE, HELP_MESSAGE)(handlerInput)
+    handle: handlerInput => buildSpeakAndRepromptResponse("Let's Play!", "Let's Play!", HELP_MESSAGE, HELP_MESSAGE)(handlerInput)
 };
 
 const CancelAndStopIntentHandler = {
