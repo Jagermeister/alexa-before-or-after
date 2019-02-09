@@ -11,6 +11,7 @@ const STORY_EVENT_COMMANDS = ["StartGame", "AMAZON.StartOverIntent"];
 const ANSWER_COMMANDS = ["AnswerIntent"];
 const STOP_CANCEL_COMMANDS = ["AMAZON.CancelIntent", "AMAZON.StopIntent"];
 const HELP_COMMANDS = ["AMAZON.HelpIntent"];
+const FALLBACK_COMMANDS = ["AMAZON.FallbackIntent"];
 
 const LAUNCH_REQUEST_TYPE = 'LaunchRequest';
 const INTENT_REQUEST_TYPE = 'IntentRequest';
@@ -24,7 +25,9 @@ const NEW_GAME_START_PHRASES = [
     "Now we are starting!",
     "Try your best!",
     "Let's play!",
-    "Going for the gold."
+    "Going for the gold.",
+    "New game, new you!",
+    "Let's get ready to rumble!"
 ];
 const NEXT_QUESTION_PHRASES = [
     "Here's your next question.",
@@ -32,10 +35,12 @@ const NEXT_QUESTION_PHRASES = [
     "Let's try this one.",
     "Next up.",
     "Ready? Here goes.",
-    ""
+    "",
+    "Here it comes.",
+    "Your next question!"
 ];
 const CORRECT_ANSWER_PHRASES = [
-    "Exactly - that's right!",
+    "Exactly, that's right!",
     "Right on! That's correct!",
     "Perfect! Great answer!",
     "You're right with that one.",
@@ -46,7 +51,8 @@ const CORRECT_ANSWER_PHRASES = [
     "Right!",
     "You got this one!",
     "You got it!",
-    "Yes!"
+    "Yes!",
+    "Bingo!"
 ];
 const WRONG_ANSWER_PHRASES = [
     "Sorry, that's not right.",
@@ -57,7 +63,8 @@ const WRONG_ANSWER_PHRASES = [
     "Oh no.",
     "No.",
     "That's not correct.",
-    "That's not right."
+    "That's not right.",
+    "Incorrect answer."
 ];
 
 
@@ -147,7 +154,6 @@ function isAlexaPresentationLanguageSupported(handlerInput) {
     return 'Alexa.Presentation.APL' in handlerInput.requestEnvelope.context.System.device.supportedInterfaces;
 }
 
-
 const NewGameHandler = {
     canHandle: handlerInput => canHandleRequestTypeAndName(INTENT_REQUEST_TYPE, STORY_EVENT_COMMANDS)(handlerInput),
     handle: handlerInput => {
@@ -169,7 +175,7 @@ function initalizeStateSession(handlerInput) {
 
 function promptNextStoryEventChallenge(handlerInput, textPrefix = '') {
     const story = fetchNextEventChallenge(handlerInput);
-    const textOutput = `${story.a.t} occur BEFORE or AFTER ${story.b.t}?`;
+    const textOutput = `${story.a.t} BEFORE or AFTER ${story.b.t}?`;
     const speechOutput = `${textPrefix} Did ${story.a.d} occur BEFORE or AFTER ${story.b.d}?`;
     const attributes = handlerInput.attributesManager.getSessionAttributes();
     const subtitle = `  Question ${attributes.challenges + 1} of ${CHALLENGES_LAST_COUNT + 1}`;
@@ -198,6 +204,10 @@ function fetchNextEventChallenge(handlerInput) {
 function eventsByAttributes(seen, yearMin, yearMax) {
     const events = require('./data/events.json');
     const options = seen ? events.filter(e => seen.indexOf(e.i) === -1) : events;
+
+    if (options.length < 2) {
+        options = events;
+    }
 
     const eventOneKey = Math.floor(Math.random() * options.length);
     const eventOne = options[eventOneKey];
@@ -259,7 +269,7 @@ const FinalScoreHandler = {
     handle(handlerInput) {
         const finalAnswer = processAnswerResponse(handlerInput);
         const attributes = handlerInput.attributesManager.getSessionAttributes();
-        const text = `${attributes.successAnswer} out of ${attributes.challenges}`;
+        const text = `That ends this round! ${attributes.successAnswer} out of ${attributes.challenges}`;
         const speak = `${finalAnswer} That ends this round! ` +
             `Your final score is ${attributes.successAnswer} out of ${attributes.challenges}. `;
         const reprompt = "Say \"Let's Play\" to start another round.";
@@ -268,10 +278,9 @@ const FinalScoreHandler = {
     }
 };
 
-
 const LaunchRequestHandler = {
     canHandle: handlerInput => canHandleRequestTypeAndName(LAUNCH_REQUEST_TYPE)(handlerInput),
-    handle: handlerInput => buildSpeakAndRepromptResponse('WELCOME', 'WELCOME', WELCOME_MESSAGE, HELP_MESSAGE)(handlerInput)
+    handle: handlerInput => buildSpeakAndRepromptResponse('WELCOME', 'Before or After will challenge your event history!', WELCOME_MESSAGE, HELP_MESSAGE)(handlerInput)
 };
 
 const HelpIntentHandler = {
@@ -284,10 +293,26 @@ const CancelAndStopIntentHandler = {
     handle: handlerInput => handlerInput.responseBuilder.speak(SESSION_END_MESSAGE)
 };
 
+const AnswerFallbackHandler = {
+    canHandle: handlerInput => canHandleRequestTypeAndName(INTENT_REQUEST_TYPE, ANSWER_COMMANDS)(handlerInput),
+    handle(handlerInput) {
+        console.log('/!\\', `Answer Fallback: ${JSON.stringify(handlerInput.requestEnvelope.request)}`);
+        return handlerInput.responseBuilder.speak(FALLBACK_MESSAGE).getResponse();
+    }
+};
+
+const FallbackIntentHandler = {
+    canHandle: handlerInput => canHandleRequestTypeAndName(INTENT_REQUEST_TYPE, FALLBACK_COMMANDS)(handlerInput),
+    handle(handlerInput) {
+        console.log('/!\\', `Fallback Intent: ${JSON.stringify(handlerInput.requestEnvelope.request)}`);
+        return handlerInput.responseBuilder.speak(FALLBACK_MESSAGE).getResponse();
+    }
+};
+
 const ErrorHandler = {
     canHandle: () => true,
     handle(handlerInput) {
-        console.log(`Command fallback: ${JSON.stringify(handlerInput.requestEnvelope.request)}`);
+        console.log('/!\\', `Error Handler: ${JSON.stringify(handlerInput.requestEnvelope.request)}`);
         return handlerInput.responseBuilder.speak(FALLBACK_MESSAGE);
     },
 };
@@ -298,7 +323,9 @@ exports.handler = Alexa.SkillBuilders.custom()
         NewGameHandler,
         AnswerHandler,
         FinalScoreHandler,
+        AnswerFallbackHandler,
         HelpIntentHandler,
         CancelAndStopIntentHandler,
+        FallbackIntentHandler,
         ErrorHandler)
     .lambda();
