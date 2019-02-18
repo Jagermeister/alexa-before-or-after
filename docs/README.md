@@ -20,3 +20,13 @@ NPM script `test` is configured with package alexa-skill-local to route requests
 ### Deployment
 #### AWS Lambda
 Everything within `lambda/custom` needs to be zipped (including node_modules) and uploaded to AWS.
+
+
+
+## F U T U R E
+- Use [SSML](https://developer.amazon.com/docs/custom-skills/speech-synthesis-markup-language-ssml-reference.html) to correctly pronounce any foreign words
+- Allow different levels of text description based on screen size
+- Allow for read along scrolling on devices
+- Take advantage of touch screens on devices to select answer
+- Provide context aware fallbacks instead of global ("Say before or after to answer, or lets play to start")
+- Provide historical summary of player performance ("18 correct this week throughout 5 quizes!")
