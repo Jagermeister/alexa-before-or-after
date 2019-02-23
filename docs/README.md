@@ -30,4 +30,5 @@ Everything within `lambda/custom` needs to be zipped (including node_modules) an
 - Take advantage of touch screens on devices to select answer
 - Provide context aware fallbacks instead of global ("Say before or after to answer, or lets play to start")
 - Provide historical summary of player performance ("18 correct this week throughout 5 quizes!")
-- Establish packs of events and enable in-skill monetization 
+- Establish packs of events and enable in-skill monetization
+- Overhaul of skill icon and APL background images
